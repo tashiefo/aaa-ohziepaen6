@@ -1,0 +1,19 @@
+# file must be named vbox.yaml or vbox.yml
+simple_config_file:
+    plugin: community.general.virtualbox
+    query:
+      logged_in_users: /VirtualBox/GuestInfo/OS/LoggedInUsersList
+    compose:
+      ansible_connection: ('indows' in vbox_Guest_OS)|ternary('winrm', 'ssh')
+
+# This specifies the IP address to pull out of VirtualBox.
+# For more information, see
+# VBoxManage guestproperty enumerate <machineName>
+network_info_path: "/VirtualBox/GuestInfo/Net/1/V4/IP"
+# add hosts to groups.  ansmaster is put under db_servers and lb_servers.
+# anything containing answeb is a web server
+plugin: community.general.virtualbox
+groups:
+  db_servers: "'ansmaster' in (inventory_hostname)"
+  lb_servers: "'ansmaster' in (inventory_hostname)"
+  web_servers: "'answeb' in (inventory_hostname)"

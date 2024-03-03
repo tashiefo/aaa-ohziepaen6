@@ -1,0 +1,49 @@
+- name: "Install MySQL database"
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - mysql-server
+    - mysql-client
+
+- name: "Start MySQL service"
+  become: true
+  ansible.builtin.service:
+    name: mysql
+    state: started
+    enabled: true
+
+- name: Ensure mysql is configured to bind to the specified address and port
+  become: true
+  community.general.ini_file:
+    dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+    section: mysqld
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    create: false
+  notify:
+    - Restart MySQL Server
+  with_items:
+    - { option: bind-address, value: "{{ mysql_bind_address | default('0.0.0.0') }}" }
+    - { option: port, value: "{{ mysql_port | default('3306') }}" }
+
+- name: "Create application database"
+  become: true
+  community.mysql.mysql_db:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: "{{ db_name }}"
+    state: present
+
+- name: "Create database users"
+  become: true
+  community.mysql.mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    host: "{{ item }}"
+    priv: '*.*:ALL'
+    column_case_sensitive: false
+  with_items:
+    - '%'
+    - 'localhost'

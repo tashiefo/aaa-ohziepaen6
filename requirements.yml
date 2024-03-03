@@ -1,0 +1,3 @@
+---
+- src: nginxinc.nginx
+- src: nginxinc.nginx_config

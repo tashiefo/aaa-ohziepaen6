@@ -1,0 +1,3 @@
+---
+# defaults file for flask_web
+flask_web_app_target_dir: "/opt/app"

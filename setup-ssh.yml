@@ -1,0 +1,43 @@
+# --extra-vars cleanup=true for a cleanup-only run
+
+- name: "Clean up after previous runs"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    # Going the long way around through JSON like this is the only way I
+    # can find to build a list dynamically like this and feed it as input
+    # to something else.
+    hostandiplist: |
+      [
+        {% for hostname in groups["all"] %}
+          "{{ hostname }}",
+          "{{ hostvars[hostname]["ansible_host"] }}",
+        {% endfor%}
+      ]
+  tasks:
+    - name: "Clean any previous hostnames out of known_hosts"
+      ansible.builtin.lineinfile:
+        # Note the trailing space on the regexp, required to avoid
+        # accidentally matching 192.168.57.111 with 192.168.57.1
+        regexp: "^{{ item }} "
+        path: "{{ lookup('env', 'HOME') + '/.ssh/known_hosts' }}"
+        state: absent
+      with_items: "{{ hostandiplist }}"
+
+- name: "Copy ssh keys into servers"
+
+  vars:
+    ansible_ssh_host_key_checking: false
+    ansible_ssh_user: "vagrant"
+    ansible_ssh_password: "vagrant"
+
+  hosts:
+    - all
+  tasks:
+    - name: "Add current key to authorized_keys on target machine"
+      when: cleanup is not defined
+      ansible.posix.authorized_key:
+        user: "vagrant"
+        state: present
+        key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"

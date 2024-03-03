@@ -1,0 +1,55 @@
+- name: "Install python flask module"
+  become: true
+  ansible.builtin.pip:
+    name: flask
+    version: "2.2.4"
+
+- name: "Install python flask mysql module"
+  become: true
+  ansible.builtin.pip:
+    name: flask-mysql
+
+- name: "Ensure directory exists - {{ flask_web_app_target_dir }}"
+  become: true
+  ansible.builtin.file:
+    path: "{{ flask_web_app_target_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "Kill flask processes if they exist"
+  become: true
+  # Just try to kill them and mostly just shut up about it. || true prevents
+  # a nonzero exit code, and -q prevents complaints if it wasn't running in
+  # the first place.
+  ansible.builtin.shell: killall -q flask || true
+  changed_when: false
+
+- name: "Pull latest app from Github and write to {{ flask_web_app_target_dir }}"
+  become: true
+  ansible.builtin.git:
+    repo: 'https://github.com/mmumshad/simple-webapp.git'
+    dest: "{{ flask_web_app_target_dir }}"
+    version: master
+    single_branch: true
+    update: true
+    force: true
+
+- name: "Ensure app.py is executable"
+  become: true
+  ansible.builtin.file:
+    path: "{{ flask_web_app_target_dir }}/app.py"
+    state: file
+    mode: "0755"
+
+- name: "Start web server"
+  become: true
+  ansible.builtin.shell: nohup flask run --host=0.0.0.0 &
+  changed_when: false
+  register: flask_result
+  failed_when: 'flask_result.rc != 0 or "Serving Flask app" not in flask_result.stdout'
+  environment:
+    FLASK_APP: "{{ flask_web_app_target_dir }}/app.py"
+    MYSQL_DATABASE_HOST: "{{ db_host }}"
+    MYSQL_DATABASE_DB: "{{ db_name }}"
+    MYSQL_DATABASE_USER: "{{ db_user }}"
+    MYSQL_DATABASE_PASSWORD: "{{ db_password }}"

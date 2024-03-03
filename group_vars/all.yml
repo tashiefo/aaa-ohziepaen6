@@ -1,0 +1,11 @@
+# Set these according to your preferences.
+
+# The target address of the notification email.
+# to_email: example@example.com
+
+# Source email address of the notification email.
+# from_email: example@example.com
+
+# Your local mail relay.
+# mailhost: mail
+
